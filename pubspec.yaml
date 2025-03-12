@@ -1,6 +1,6 @@
 name: flutter_instagram_api
 description: "A Flutter package for easy Instagram login using OAuth authentication. Fetch user data seamlessly with just a few lines of code."
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/KaranParmarkp/flutter_instagram_api
 repository: https://github.com/KaranParmarkp/flutter_instagram_api
 

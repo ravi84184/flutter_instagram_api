@@ -1,47 +1,55 @@
-# Instagram Login for Flutter 🚀
+# Instagram Login & Media Upload for Flutter 🚀
 
-A Flutter package for easy **Instagram login** using OAuth authentication. Fetch user data seamlessly with just a few lines of code.
-
+A Flutter package for **secure Instagram login** using OAuth authentication. It allows fetching user details and supports **image uploads (single & carousel)** to Instagram via the Graph API.
 
 ## Features 🌟
 
-- **Secure OAuth-based login** with Instagram.
-- **Fetch user details** (name, profile picture, followers, etc.).
+- **OAuth-based login** with Instagram.
+- **Fetch user profile details** (ID, username, account type, profile picture, media count).
+- **Upload and publish Instagram posts** (single images & carousels).
 - **Easy integration** with your Flutter app.
-- **Supports Meta developer account credentials**.
+- **Requires a Meta Developer account & Instagram App setup.**
+
+---
 
 ## Getting Started 🏁
 
 ### Installation
 
-Add this package to your project by running:
+Run this command to install the package:
 
 ```sh
 flutter pub add flutter_instagram_api
-```
-Or, manually add it to your pubspec.yaml file:
+```  
 
-```bash
+Or, manually add it to your **pubspec.yaml**:
+
+```yaml
 dependencies:
-flutter_instagram_api: latest_version
-```
+  flutter_instagram_api: latest_version
+```  
 
-## Usage  📌
+---
 
-Import the package:
+## Usage 📌
+
+### Import the package
 
 ```dart
 import 'package:flutter_instagram_api/flutter_instagram_api.dart';
-```
+```  
 
-## How to Use
-Use the following method to initiate the Instagram login process:
+---
+
+### 1️⃣ **Login & Fetch User Data**
+
+Use the following method to initiate Instagram login and fetch user details:
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_instagram_api/flutter_instagram_api.dart';
 
-class FlutterInstagramApiScreen extends StatelessWidget {
+class InstagramLoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,21 +60,17 @@ class FlutterInstagramApiScreen extends StatelessWidget {
             FlutterInstagramApi.login(
               context,
               instaConfig: InstaConfig(
-                instaUrl: 'The URL from your Meta Developer Account',
+                instaUrl: 'https://your-meta-developer-url.com',
                 clientId: 'your_client_id',
                 clientSecret: 'your_client_secret',
               ),
-              userData: (data) {
-                print('User Data:');
-                print('User ID: ${data.userId}');
-                print('ID: ${data.id}');
-                print('Name: ${data.name}');
-                print('Username: ${data.username}');
-                print('Account Type: ${data.accountType}');
-                print('Followers Count: ${data.followersCount}');
-                print('Follows Count: ${data.followsCount}');
-                print('Media Count: ${data.mediaCount}');
-                print('Profile Picture URL: ${data.profilePictureUrl}');
+              userData: (UserDataModel data) {
+                print('✅ User Data Retrieved:');
+                print('📌 User ID: ${data.userId}');
+                print('👤 Username: ${data.username}');
+                print('📷 Profile Picture: ${data.profilePictureUrl}');
+                print('📊 Account Type: ${data.accountType}');
+                print('🎥 Media Count: ${data.mediaCount}');
               },
             );
           },
@@ -76,24 +80,79 @@ class FlutterInstagramApiScreen extends StatelessWidget {
     );
   }
 }
-```
+```  
 
+---
 
-## Additional information ℹ️
+### 2️⃣ **Upload & Publish Posts (Single or Multiple Images)**
 
-For more details:
+```dart
+void uploadPost() async {
+  bool success = await FlutterInstagramApi.uploadPost(
+    imageUrls: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg'
+    ], // Supports single or multiple images
+    caption: "My Instagram Post via API 🚀",
+    accessToken: "your_access_token",
+    userId: "your_instagram_user_id",
+  );
 
-📖 Meta Developer Account: Ensure your app is registered with Meta for Developers to obtain your Instagram API credentials. Make sure your app type is Business and that you have added Instagram in the Products section.
+  if (success) {
+    print("🎉 Post uploaded successfully!");
+  } else {
+    print("❌ Failed to upload post.");
+  }
+}
+```  
 
-📖 Configuration Details:
+---
 
-1. Click on Instagram in the Products section, then select Set up API with Instagram Login.
-2. Here, you will find your Instagram App ID and App Secret, which correspond to your Client ID and Client Secret.
-Next Steps:
-✅ Click on Set up Instagram Business Login (3-step process).
-✅ Go to Business Login Settings and add your OAuth Redirect URIs.
-✅ Copy the Embed URL—this will be your instaUrl.
+## **Instagram API Setup (Meta Developer Account) 🛠️**
 
+To use this package, you need to set up an **Instagram App** in the **Meta Developer Portal**:
 
-## License 📄
-This package is licensed under the MIT License.
+### **1️⃣ Register Your App**
+- Go to the [Meta Developer Portal](https://developers.facebook.com/).
+- Create a new **Business App**.
+- Add **Instagram** as a product & set up **Instagram Graph API**.
+
+### **2️⃣ Configure OAuth & Permissions**
+- Navigate to **Instagram Basic Display API** settings.
+- Add your **OAuth Redirect URL** (e.g., `https://your-app.com/auth`).
+- Set permissions:
+    - `user_profile` (Fetch user ID, username, and profile picture)
+    - `user_media` (Retrieve user media for posting)
+
+### **3️⃣ Obtain API Credentials**
+- Get **Client ID** & **Client Secret** from your Instagram App settings.
+- Ensure your app is **Live** or in **Development Mode** for testing.
+
+---
+
+## **Troubleshooting & Notes** 🛠️
+
+⚠️ **Permissions Issues?**
+- Ensure you’ve enabled **Instagram Graph API** in your Meta Developer settings.
+- Use a verified **Instagram Business or Creator account**.
+
+⚠️ **Login Not Working?**
+- Verify that your **Redirect URI** matches what you set in the Meta Developer Console.
+- Ensure your **Client ID & Client Secret** are correct.
+
+⚠️ **Post Upload Failing?**
+- The **image URLs must be publicly accessible**.
+- The Instagram Business account must have **permissions to publish posts**.
+
+---
+
+## **License 📝**
+
+This package is **open-source** and licensed under the **MIT License**.
+
+---
+
+### **📩 Need Help?**
+For issues, feature requests, or contributions, check out the [GitHub Repository](https://github.com/KaranParmarkp/flutter_instagram_api).
+
+🚀 **Happy Coding!**  
