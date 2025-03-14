@@ -3,7 +3,7 @@ import 'package:flutter_instagram_api/src/modal/user_data_model.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../api handler/api_handler.dart';
 
-/// screen for instagram login
+/// Screen for Instagram login
 class InstaLoginView extends StatefulWidget {
   final Function(UserDataModel) userData;
   const InstaLoginView({super.key, required this.userData});
@@ -13,7 +13,7 @@ class InstaLoginView extends StatefulWidget {
 }
 
 class _InstaLoginViewState extends State<InstaLoginView> {
-  /// For showing instagram login page in web
+  /// WebView Controller
   late WebViewController _webViewController;
 
   @override
@@ -23,11 +23,13 @@ class _InstaLoginViewState extends State<InstaLoginView> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onUrlChange: (change) async {
-            var url = change.url;
-            if (url!.startsWith('${InstaApi.config.reDirectURL}?code=')) {
+          onNavigationRequest: (request) {
+            String url = request.url;
+            if (url.contains('code=')) { // More flexible check
               _getData(url);
+              return NavigationDecision.prevent; // Stops WebView from loading further
             }
+            return NavigationDecision.navigate;
           },
         ),
       )
@@ -36,30 +38,35 @@ class _InstaLoginViewState extends State<InstaLoginView> {
 
   /// To fetch user data
   var _loading = false;
+
   Future<void> _getData(String url) async {
     setState(() {
       _loading = true;
     });
+
     Uri uri = Uri.parse(url);
-    var code = uri.queryParameters['code'];
-    await InstaApi.getAccessToken(code: code.toString()).then(
-      (token) async {
+    String? code = uri.queryParameters['code'];
+
+    // Ensure we remove `#_` if present
+    if (code != null) {
+      code = code.split('#_').first;
+    }
+    print("code got $code");
+    if (code != null && code.isNotEmpty) {
+      try {
+        String? token = await InstaApi.getAccessToken(code: code);
         if (token != null) {
-          await InstaApi.getUserData(accessToken: token).then(
-            (data) {
-              if (data != null) {
-                widget.userData(data);
-                Navigator.of(context).pop();
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
-          );
-        } else {
-          Navigator.of(context).pop();
+          UserDataModel? data = await InstaApi.getUserData(accessToken: token);
+          if (data != null) {
+            widget.userData(data);
+          }
         }
-      },
-    );
+      } catch (e) {
+        debugPrint("Error fetching user data: $e");
+      }
+    }
+
+    Navigator.of(context).pop();
     setState(() {
       _loading = false;
     });
@@ -70,31 +77,34 @@ class _InstaLoginViewState extends State<InstaLoginView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Instagram login',
+          'Instagram Login',
           style: TextStyle(fontWeight: FontWeight.w500),
         ),
         automaticallyImplyLeading: false,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop(); // Close the WebView
+          },
+        ),
       ),
       body: Stack(
         alignment: Alignment.center,
         children: [
           WebViewWidget(controller: _webViewController),
-          _loading
-              ? const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Text(
-                      'Please wait...',
-                      style: TextStyle(color: Colors.black),
-                    )
-                  ],
+          if (_loading)
+            const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 10),
+                Text(
+                  'Please wait...',
+                  style: TextStyle(color: Colors.black),
                 )
-              : const SizedBox()
+              ],
+            ),
         ],
       ),
     );

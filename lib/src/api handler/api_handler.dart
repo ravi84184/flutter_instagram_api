@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../flutter_instagram_api.dart';
 import '../modal/user_data_model.dart';
@@ -10,7 +11,10 @@ class InstaApi {
   /// Step 1 & Step 2 Combined: Exchange Authorization Code → Get Long-Lived Token
   static Future<String?> getAccessToken({required String code}) async {
     try {
+      log("🔵 Step 1: Requesting short-lived access token...");
       var url = Uri.parse('https://api.instagram.com/oauth/access_token');
+      log("Request URL: $url");
+
       var response = await http.post(url, body: {
         'client_id': config.instaID,
         'client_secret': config.instaSecret,
@@ -20,17 +24,20 @@ class InstaApi {
       });
 
       var data = jsonDecode(response.body);
+      log("Response: ${response.body}");
+
       if (response.statusCode == 200) {
         String shortLivedToken = data['access_token'];
+        log("✅ Received short-lived token: $shortLivedToken");
 
         // Immediately convert short-lived token to long-lived token
         return await _getLongLivedToken(shortLivedToken);
       } else {
-        print('Error fetching access token: ${data['error']}');
+        log('❌ Error fetching access token: ${data['error']}');
         return null;
       }
     } catch (e) {
-      print('Exception in getAccessToken: $e');
+      log('⚠️ Exception in getAccessToken: $e');
       return null;
     }
   }
@@ -38,23 +45,28 @@ class InstaApi {
   /// Step 2: Convert Short-Lived Token to Long-Lived Token
   static Future<String?> _getLongLivedToken(String shortLivedToken) async {
     try {
+      log("🔵 Step 2: Converting short-lived token to long-lived token...");
       var url = Uri.parse(
-        'https://graph.instagram.com/access_token?'
-            'grant_type=ig_exchange_token&'
-            'client_secret=${config.instaSecret}&'
-            'access_token=$shortLivedToken',
+        'https://graph.instagram.com/access_token'
+            '?grant_type=ig_exchange_token'
+            '&client_secret=${config.instaSecret}'
+            '&access_token=$shortLivedToken',
       );
+      log("Request URL: $url");
 
-      var response = await http.get(url);
+      var response = await http.get(url); // Using GET request
       var data = jsonDecode(response.body);
+      log("Response: ${response.body}");
+
       if (response.statusCode == 200) {
-        return data['access_token']; // Returning Long-Lived Token
+        log("✅ Received long-lived token: ${data['access_token']}");
+        return data['access_token'];
       } else {
-        print('Error converting to long-lived token: ${data['error']}');
+        log('❌ Error converting to long-lived token: ${data['error']}');
         return null;
       }
     } catch (e) {
-      print('Exception in _getLongLivedToken: $e');
+      log('⚠️ Exception in _getLongLivedToken: $e');
       return null;
     }
   }
@@ -62,20 +74,25 @@ class InstaApi {
   /// Step 3: Fetch User Data
   static Future<UserDataModel?> getUserData({required String accessToken}) async {
     try {
+      log("🔵 Step 3: Fetching user data...");
       var url = Uri.parse(
         'https://graph.instagram.com/me?fields=id,username,account_type,media_count,profile_picture_url&access_token=$accessToken',
       );
+      log("Request URL: $url");
 
       var response = await http.get(url);
       var data = jsonDecode(response.body);
+      log("Response: ${response.body}");
+
       if (response.statusCode == 200) {
+        log("✅ Successfully fetched user data.");
         return UserDataModel.fromJson(data, accessToken: accessToken);
       } else {
-        print('Error fetching user data: ${data['error']}');
+        log('❌ Error fetching user data: ${data['error']}');
         return null;
       }
     } catch (e) {
-      print('Exception in getUserData: $e');
+      log('⚠️ Exception in getUserData: $e');
       return null;
     }
   }
@@ -88,11 +105,15 @@ class InstaApi {
     required String userId,
   }) async {
     try {
+      log("🔵 Step 4: Uploading images and publishing post...");
       List<String> containerIds = [];
 
       // Step 4.1: Upload each image to an Instagram media container
       for (String imageUrl in imageUrls) {
-        var uploadUrl = Uri.parse('https://graph.facebook.com/v19.0/$userId/media');
+        log("🟢 Uploading image: $imageUrl");
+        var uploadUrl = Uri.parse('https://graph.instagram.com/v22.0/$userId/media');
+        log("Request URL: $uploadUrl");
+
         var uploadResponse = await http.post(uploadUrl, body: {
           'image_url': imageUrl,
           'caption': caption,
@@ -100,61 +121,42 @@ class InstaApi {
         });
 
         var uploadData = jsonDecode(uploadResponse.body);
+        log("Response: ${uploadResponse.body}");
+
         if (uploadResponse.statusCode == 200) {
           containerIds.add(uploadData['id']);
+          log("✅ Successfully uploaded media. ID: ${uploadData['id']}");
         } else {
-          print('Error uploading media: ${uploadData['error']}');
+          log('❌ Error uploading media: ${uploadData['error']}');
           return false;
         }
       }
 
       // If only one image, publish it directly
       if (containerIds.length == 1) {
-        var publishUrl = Uri.parse('https://graph.facebook.com/v19.0/$userId/media_publish');
+        log("🔵 Publishing single image...");
+        var publishUrl = Uri.parse('https://graph.instagram.com/v22.0/$userId/media_publish');
+        log("Request URL: $publishUrl");
+
         var publishResponse = await http.post(publishUrl, body: {
           'creation_id': containerIds.first,
           'access_token': accessToken,
         });
 
+        log("Response: ${publishResponse.body}");
+
         if (publishResponse.statusCode == 200) {
-          return true; // Successfully posted single image
+          log("✅ Successfully posted single image.");
+          return true;
         } else {
-          print('Error publishing single image: ${jsonDecode(publishResponse.body)['error']}');
+          log('❌ Error publishing single image: ${jsonDecode(publishResponse.body)['error']}');
           return false;
         }
       }
 
-      // Step 4.2: Create a carousel container for multiple images
-      var carouselUrl = Uri.parse('https://graph.facebook.com/v19.0/$userId/media');
-      var carouselResponse = await http.post(carouselUrl, body: {
-        'media_type': 'CAROUSEL',
-        'children': containerIds.join(','), // Add all media container IDs
-        'access_token': accessToken,
-      });
-
-      var carouselData = jsonDecode(carouselResponse.body);
-      if (carouselResponse.statusCode != 200) {
-        print('Error creating carousel: ${carouselData['error']}');
-        return false;
-      }
-
-      String carouselId = carouselData['id'];
-
-      // Step 4.3: Publish the carousel post
-      var publishCarouselUrl = Uri.parse('https://graph.facebook.com/v19.0/$userId/media_publish');
-      var publishCarouselResponse = await http.post(publishCarouselUrl, body: {
-        'creation_id': carouselId,
-        'access_token': accessToken,
-      });
-
-      if (publishCarouselResponse.statusCode == 200) {
-        return true; // Successfully posted multiple images
-      } else {
-        print('Error publishing carousel: ${jsonDecode(publishCarouselResponse.body)['error']}');
-        return false;
-      }
+      return false;
     } catch (e) {
-      print('Exception in uploadAndPublishPost: $e');
+      log('⚠️ Exception in uploadAndPublishPost: $e');
       return false;
     }
   }
