@@ -34,6 +34,7 @@ class UserDataModel {
       accessToken: accessToken);
 
   Map<String, dynamic> toJson() => {
+        "id": id,
         "user_id": userId,
         "username": username,
         "name": name,
@@ -42,6 +43,6 @@ class UserDataModel {
         "followers_count": followersCount,
         "follows_count": followsCount,
         "media_count": mediaCount,
-
+        "accessToken": accessToken,
       };
 }
